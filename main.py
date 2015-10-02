@@ -1,4 +1,4 @@
-#python module for test neural nets
+#python module for test neural nets v0.1
 import math
 import random
 
@@ -12,6 +12,8 @@ import random
 #       the network, this could be achieved by recursive functions.
 #           network function returns metadata and calls layers to do same,
 #           layers call nodes etc
+#
+#       TODO: introduce iteration component to strucure simultaneous firings
 #
 #       nodes and connections:
 #           when a node recieves a total sum above a certain threshold it will
@@ -32,9 +34,9 @@ import random
 #           should network also be responsible for connections?
 #
 #
-#   current goals
+#   current goals:
 
-class node(object):
+class node(object): that is for a forward
 #    node object for neural network
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    internal variables:____________________________________________________
@@ -60,7 +62,7 @@ class node(object):
         self.propagationForwardsNormal=0.0
         self.propagationBackwardsNormal=0.0
 
-    def create_Node(self):
+    def create_Connection(self):
 #        fucntion to create node
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
@@ -95,7 +97,7 @@ class node(object):
         self.self_Propagation(sender)
         return
 
-    def self_Propagation(self, inputPropagation):
+    def self_propagation(self, inputPropagation):
 #        after other node propagates to this node test whether this node
 #        propagates
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -170,26 +172,55 @@ class node(object):
         pass
 
 class connection(object):
-    #conection object, is dummy object currently
-    def __init__(self, sendID, recvID):
+#   conection object, used to connect nodes
+#    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#    internal variables:________________________________________________________
+#    sendID -- node that this connects from
+#    recvID -- node that this connects to
+#    connection strength -- currently just a placeholder for future implementation
+#    connection length --  currently just a placeholder for future implementation
+#
+#    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#    structure:_________________________________________________________________
+#    when send node intiates propagation along this connection it should trigger
+#    an internal change in the recieving node -- typically increasing the internal
+#    activation potential.
+#    this object should also be able to record itself
+#    changing the recieving node should also be possible, though there is currently
+#    no need to do this and only exists for potential future use -- i.e multiple
+#    receieving nodes?
+#    the connection also needs to be self maintaining, destroying self in
+#    in the event of the recieving node having been previously deleted and hence
+#    informing the sending node that propagation failed and to initiate propagation
+#    again.
+#
+#    TODO: implement itteration
+#    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    def __init__(self, sendNode, recvNode):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        sendNode -- sender node, is type node object
+#        recvNode -- reciever node, is type node object
+#        connectionStrength -- initiailise to 1.0, currently placeholder
+#        connectionLength -- initialise to 1.0, currently placeholder
 #        output:
-#
+#        internal values should be initialized
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        self.sendNode = sendNode
+        self.recvNode = recvNode
+        connectionStrength = 1.0
+        connectionLength = 1.0
 
-    def propagate(self):
+    def propagate(self,nodePropgationValue):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        nodePropagationValue: floating point value represnting propgation value
 #        output:
-#
+#        calls recvNode recieve_propagation function
+#        returns nothing
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+            self.recvNode.recieve_propagation(nodePropagationValue)
+            return
 
     def output_state(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
