@@ -196,32 +196,66 @@ class connection(object):
 #    again.
 #
 #    TODO: implement itteration stuff
+#           current thinking is have stack of propagations, each item in stack has
+#           countdown which activates reciever node propagation when 0 is reached
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, sendNode, recvNode):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #        sendNode -- sender node, is type node object
 #        recvNode -- reciever node, is type node object
-#        connectionStrength -- initiailise to 1.0, currently placeholder
-#        connectionLength -- initialise to 1.0, currently placeholder
+#        connectionStrength -- initiailise to 1.0 (float), currently placeholder
+#        propagationTime -- initialise to 0 (integer), delay in iterations between
+#                           being called and sending, 0 i son delay, 1 is single
+#                           network iteration delay etc
+#        propagationStack -- list containing instances of propagation in case of
+#                           multiple propagations along pipe
 #        output:
 #        internal values should be initialized
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.sendNode = sendNode
         self.recvNode = recvNode
-        connectionStrength = 1.0
-        connectionLength = 1.0
+        self.connectionStrength = 1.0
+        self.propagationTime = 0
+        self.propagationStack = []
 
-    def propagate(self,nodePropgationValue):
+    def update_iteration(self):
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#        input:
+#
+#
+#        output:
+#
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        for propagation in self.propagationStack:
+            propagation[0] -= 1
+        if self.propagationStack[0][0] <= 0:
+            self.initiate_propagation(
+                                self.propagationStack[0][1])
+            self.propagationStack.pop(0)
+        return
+
+    def initiate_propagation(self,nodePropagationValue):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #        nodePropagationValue: floating point value represnting propgation value
 #        output:
-#        calls recvNode recieve_propagation function
+#        appends propagation to stack
 #        returns nothing
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-            self.recvNode.recieve_propagation(nodePropagationValue)
+            self.propagationStack.append([self.propagationTime,
+                                                nodePropagationValue])
             return
+
+    def propagate(self,nodePropagationValue):
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#        input:
+#        nodePropagationValue: floating point value represnting propgation value
+#        output:
+#        calls associated reciever node's internal update function
+#        returns nothing
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        self.recvNode.recieve_propagation(nodePropagationValue)
 
     def output_state(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
