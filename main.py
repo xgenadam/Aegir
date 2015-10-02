@@ -40,14 +40,15 @@ class node(object): that is for a forward
 #    node object for neural network
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    internal variables:____________________________________________________
-    #    node identity: unique identifier for node
-    #    backwardNodeConnections, forwardNodeConnections:
-    #       list of nodes it propagates to and nodes it propagates from
-    #    activation: this value gets changed when this node is propagated to
-    #    activationThreshold: once activation reaches this the node will propagate
-    #    backwards/forwardsPropagationWeight: value this node propagates by
-    #    propagationBackwards/ForwardsNormal: total values of forwards/backwards
-    #       node activation weights, deciding which nodes to fire based on RNG
+#       node identity: unique identifier for node
+#       backwardNodeConnections, forwardNodeConnections:
+#          list of nodes it propagates to and nodes it propagates from
+#       activation: this value gets changed when this node is propagated to
+#       activationThreshold: once activation reaches this the node will propagate
+#       backwards/forwardsPropagationWeight: value this node propagates by
+#       propagationBackwards/ForwardsNormal: total values of forwards/backwards
+#          node activation weights, deciding which nodes to fire based on RNG
+#       TODO: implement iteration stuff
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    structure:
 #
@@ -194,7 +195,7 @@ class connection(object):
 #    informing the sending node that propagation failed and to initiate propagation
 #    again.
 #
-#    TODO: implement itteration
+#    TODO: implement itteration stuff
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, sendNode, recvNode):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
