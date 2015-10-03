@@ -198,6 +198,7 @@ class connection(object):
 #    TODO: implement itteration stuff
 #           current thinking is have stack of propagations, each item in stack has
 #           countdown which activates reciever node propagation when 0 is reached
+#   TODO: implement extensive error handling
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, sendNode, recvNode):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -208,7 +209,7 @@ class connection(object):
 #        propagationTime -- initialise to 0 (integer), delay in iterations between
 #                           being called and sending, 0 i son delay, 1 is single
 #                           network iteration delay etc
-#        propagationStack -- list containing instances of propagation in case of
+#        propagationStack -- 2D list containing instances of propagation in case of
 #                           multiple propagations along pipe
 #        output:
 #        internal values should be initialized
@@ -220,24 +221,28 @@ class connection(object):
         self.propagationStack = []
 
     def update_iteration(self):
+#        function for dealing with networking timestep at connection level
+#        reduces propagation countdown on all items in stack and initiates
+#        recvNode propagation fucntion when countdown reaches 0 then removes
+#        item from propagationStack
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        self
 #        output:
-#
+#        returns none
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        for propagation in self.propagationStack:
-            propagation[0] -= 1
-        if self.propagationStack[0][0] <= 0:
-            self.initiate_propagation(
-                                self.propagationStack[0][1])
-            self.propagationStack.pop(0)
+        for stackItem in xrange(len(propagationStack)):
+            self.propagationStack[stackItem][0] -= 1
+            if self.propagationStack[stackItem][0] <= 0:
+                self.initiate_propagation(
+                                    self.propagationStack[stackItem][1])
+                self.propagationStack.pop(stackItem)
         return
 
     def initiate_propagation(self,nodePropagationValue):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
+#        self
 #        nodePropagationValue: floating point value represnting propgation value
 #        output:
 #        appends propagation to stack
@@ -256,8 +261,13 @@ class connection(object):
 #        returns nothing
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.recvNode.recieve_propagation(nodePropagationValue)
+        return
 
     def output_state(self):
+#        function to return data about self, in json format? should be called
+#        by object above this one, typically the creating node which should then
+#        pass the data up the object heirachy.
+#       TODO: implement this function
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #
@@ -268,6 +278,15 @@ class connection(object):
         pass
 
     def connection_maintainance(self):
+#        this is the fucntion that handles intenral errors and fallback.
+#        this function should also handle maintainance, for instance if the sending
+#        node gets deleted this should be automatically delted, otherwise memory
+#        leaking will occur.
+#        this node should also have the ability to check tht both ends are still
+#        in existence, this needs to be done in such as way that it is not dependent
+#        on the reciver actually being a node as future functionality may require
+#        the connection to go to an entire layer or an entire sub network. this
+#        shouldnt be the case but better to be safe now than sorry later
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #
@@ -278,6 +297,8 @@ class connection(object):
         pass
 
     def change_recvID(self):
+#        this function is not needed currently but may be needed for future implementation
+#        such as mutating one node into two or into a subnetwork or sublayer
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #
@@ -288,12 +309,13 @@ class connection(object):
         pass
 
     def destroy_self(self):
+#        this function exsits to destroy an instance of itself, this is achieved
+#        by deleting all reference to this object
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        self
 #        output:
-#
+#        destroys self and returns none
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pass
 
