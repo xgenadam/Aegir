@@ -198,6 +198,8 @@ class connection(object):
 #    TODO: implement itteration stuff
 #           current thinking is have stack of propagations, each item in stack has
 #           countdown which activates reciever node propagation when 0 is reached
+#           |-- done
+#
 #   TODO: implement extensive error handling
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, sendNode, recvNode):
@@ -211,6 +213,7 @@ class connection(object):
 #                           network iteration delay etc
 #        propagationStack -- 2D list containing instances of propagation in case of
 #                           multiple propagations along pipe
+#        viability --  boolean, is true when node has no problems is false otherwise
 #        output:
 #        internal values should be initialized
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -219,6 +222,7 @@ class connection(object):
         self.connectionStrength = 1.0
         self.propagationTime = 0
         self.propagationStack = []
+        self.connectionViability = True
 
     def update_iteration(self):
 #        function for dealing with networking timestep at connection level
@@ -260,7 +264,10 @@ class connection(object):
 #        calls associated reciever node's internal update function
 #        returns nothing
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.recvNode.recieve_propagation(nodePropagationValue)
+        try:
+            self.recvNode.recieve_propagation(nodePropagationValue)
+        except Exception as e: #TODO: add error codes, if recvNode does not recieve initiaite
+            connection_mainainance(e)           # maintainance function
         return
 
     def output_state(self):
@@ -277,24 +284,20 @@ class connection(object):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pass
 
-    def connection_maintainance(self):
-#        this is the fucntion that handles intenral errors and fallback.
-#        this function should also handle maintainance, for instance if the sending
-#        node gets deleted this should be automatically delted, otherwise memory
-#        leaking will occur.
-#        this node should also have the ability to check tht both ends are still
-#        in existence, this needs to be done in such as way that it is not dependent
-#        on the reciver actually being a node as future functionality may require
-#        the connection to go to an entire layer or an entire sub network. this
-#        shouldnt be the case but better to be safe now than sorry later
+    def connection_maintainance(self, exception):
+#        this function handles maintainance in the case that any other function
+#        throws and exception. typically this means logging error details, raising
+#        the error and then destroying the connection by removing all references
+#        to it in other scopes.
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        Error code from other function
 #        output:
-#
+#        error log, sendNode and recvNode informed of connection removal
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+
+
+
 
     def change_recvID(self):
 #        this function is not needed currently but may be needed for future implementation
@@ -310,7 +313,8 @@ class connection(object):
 
     def destroy_self(self):
 #        this function exsits to destroy an instance of itself, this is achieved
-#        by deleting all reference to this object
+#        by deleting all reference to this object and letting the garbage collector
+#        do its job
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #        self
