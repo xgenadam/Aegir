@@ -1,6 +1,7 @@
 #python module for test neural nets v0.1
 import math
 import random
+import logging
 
 #   code structure:
 #       Basic: network contains layers, layers contains nodes
@@ -194,13 +195,8 @@ class connection(object):
 #    in the event of the recieving node having been previously deleted and hence
 #    informing the sending node that propagation failed and to initiate propagation
 #    again.
-#
-#    TODO: implement itteration stuff
-#           current thinking is have stack of propagations, each item in stack has
-#           countdown which activates reciever node propagation when 0 is reached
-#           |-- done
-#
 #   TODO: implement extensive error handling
+#         add logging functionality
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, sendNode, recvNode):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -213,7 +209,7 @@ class connection(object):
 #                           network iteration delay etc
 #        propagationStack -- 2D list containing instances of propagation in case of
 #                           multiple propagations along pipe
-#        viability --  boolean, is true when node has no problems is false otherwise
+#        propCount -- number of times propagated
 #        output:
 #        internal values should be initialized
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -222,7 +218,14 @@ class connection(object):
         self.connectionStrength = 1.0
         self.propagationTime = 0
         self.propagationStack = []
-        self.connectionViability = True
+        self.ID = sendNode.generateConnectionID() # string of format net$lyr$nd$cn
+        self.propCount = 0
+
+    def __repr__(self):
+        #defined output of self, should be similar to output state function but
+        #nuanced for different conext. primarily output state is to be used for
+        #more rigorous diagnostics and may be expanded upon later.
+        return self.output_state() # this will do for now but can be expanded upon later
 
     def update_iteration(self):
 #        function for dealing with networking timestep at connection level
@@ -235,13 +238,16 @@ class connection(object):
 #        output:
 #        returns none
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        for stackItem in xrange(len(propagationStack)):
-            self.propagationStack[stackItem][0] -= 1
-            if self.propagationStack[stackItem][0] <= 0:
-                self.initiate_propagation(
-                                    self.propagationStack[stackItem][1])
-                self.propagationStack.pop(stackItem)
-        return
+        try:
+            for stackItem in xrange(len(propagationStack)):
+                self.propagationStack[stackItem][0] -= 1
+                if self.propagationStack[stackItem][0] <= 0:
+                    self.initiate_propagation(
+                                        self.propagationStack[stackItem][1])
+                    self.propagationStack.pop(stackItem)
+        except Exception as e:
+            connection_mainainance(e)
+
 
     def initiate_propagation(self,nodePropagationValue):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -252,9 +258,12 @@ class connection(object):
 #        appends propagation to stack
 #        returns nothing
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        try:
             self.propagationStack.append([self.propagationTime,
                                                 nodePropagationValue])
-            return
+        except Exception as e:
+            connection_mainainance(e)
+
 
     def propagate(self,nodePropagationValue):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -268,26 +277,31 @@ class connection(object):
             self.recvNode.recieve_propagation(nodePropagationValue)
         except Exception as e: #TODO: add error codes, if recvNode does not recieve initiaite
             connection_mainainance(e)           # maintainance function
-        return
 
-    def output_state(self):
-#        function to return data about self, in json format? should be called
+
+    def output_state(self, *errors):
+#        function to return data about self. should be called
 #        by object above this one, typically the creating node which should then
 #        pass the data up the object heirachy.
-#       TODO: implement this function
+#       __repr__ should call this function and return this information + more
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        self
 #        output:
-#
+#        returns object comprising of:
+#        self.ID, sendNode.ID, recvNode.ID, self.connectionStrength,
+#        self.propagationTime, self.propCount and  any possible errors
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        state  = [self.ID, self.sendNode.ID, self.recvNode.ID,
+                self.ConnectionStrength, self.propagationTime, self.propCount]
+        for error in errors:
+            state.append(error)
+        return state
 
-    def connection_maintainance(self, exception):
+    def connection_maintainance(self, *errors):
 #        this function handles maintainance in the case that any other function
-#        throws and exception. typically this means logging error details, raising
-#        the error and then destroying the connection by removing all references
+#        throws an exception. typically this means logging error details, raising
+#        the error if critical and then destroying the connection by removing all references
 #        to it in other scopes.
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
@@ -295,19 +309,19 @@ class connection(object):
 #        output:
 #        error log, sendNode and recvNode informed of connection removal
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        #TODO:log info
 
+        #TODO: if error critical stop propgram
 
+        #destroy self
+        self.destroy_self()
 
 
     def change_recvID(self):
 #        this function is not needed currently but may be needed for future implementation
 #        such as mutating one node into two or into a subnetwork or sublayer
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        dummy function not in use
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pass
 
@@ -316,12 +330,15 @@ class connection(object):
 #        by deleting all reference to this object and letting the garbage collector
 #        do its job
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#        self
+#        input: self
 #        output:
 #        destroys self and returns none
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        try:
+            self.recvNode.remove_connection(self.ID)
+            self.sendNode.remove_connection(self.ID)
+        except Exception as fatal:
+            #bad stuff has happened terminate the program
 
 class layer(object):
 #    object describing layer of nodes.
