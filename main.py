@@ -43,7 +43,7 @@ class node(object): that is for a forward
 #    internal variables:____________________________________________________
 #       node identity: unique identifier for node
 #       backwardNodeConnections, forwardNodeConnections:
-#          list of nodes it propagates to and nodes it propagates from
+#          list of connections it propagates to and connections it propagates from
 #       activation: this value gets changed when this node is propagated to
 #       activationThreshold: once activation reaches this the node will propagate
 #       backwards/forwardsPropagationWeight: value this node propagates by
@@ -54,104 +54,93 @@ class node(object): that is for a forward
 #    structure:
 #
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, ident):
-        self.ident=ident
-        self.connectionList=[]
-        self.activationPotential=0.0
-        self.activationThreshold=5.0
-        self.forwardPropagationWeight=1.0
-        self.backwardPropagationWeight=0.1
-        self.propagationForwardsNormal=0.0
-        self.propagationBackwardsNormal=0.0
+    def __init__(self, parentLayer):
+        self.parentID = partentLayer.ID
+        self.ID = parentLayer.generate_Node_ID()
+        self.sendToList = []
+        self.recvFromList = []
+        self.activationPotential = 0.0
+        self.activationThreshold = 5.0
+        self.propagationWeight = 1.0
+        self.backwardPropagationWeight = 0.1 #dummy value to be dealt with later
+        self.propagationNormal = 0.0
+        self.propagationBackwardsNormal = 0.0
 
-    def create_Connection(self):
+    def create_Connection(self,recvNode):
 #        fucntion to create node
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
-#
-#
+#        self & recvNode
 #        output:
-#
+#        add connection data to node
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        self.propagationNormal * len(sendToList)
+        self.sendToList.append( [1.0, connection(self, recvNode)] )
+        self.propagationNormal += 1.0
+        self.propagationNormal /= len(sendToList)
+
+    def remove_recvFrom(self, connectionID):
+        for cntn in xrange(len(recvFromList)):
+            if recvFromList[cntn].ID == connectionID:
+                del recvFromList[cntn]
+                return
+
+    def remove_sendNode(self,connectionID):
+        for cntn in xrange(len(sendToList)):
+            if sendToList[cntn][1].ID == connectionID
+                self.propagationNormal * len(sendToList)
+                self.propagationNormal -= sendToList[cntn][0]
+                del sendToList[cntc]
+                self.propagationNormal /= len(sendToList)
+
 
     def propagate(self):
-#        node propagates to another node, forwards or backwards
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        node propagates to another node
+#        pick a connection and call its propagation function
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        trigger = random.random() * self.propagationNormal #random number used to pick which connection to use
+        weightTotal = 0.0
+        for connection in xrange(len(sendToList)):
+            weightTotal += sendToList[connection][0]
+            if weightTotal > trigger:
+                sendToList[connection][1].initiate_propagation(
+                    self.propagationWeight)
+                break
 
     def recieve_propagation(self, sender):
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        node recieves propagation, currently a dummy function that calls another
 #        function to do the actual work
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.self_Propagation(sender)
+        self.self_propagation(sender)
         return
 
     def self_propagation(self, inputPropagation):
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        after other node propagates to this node test whether this node
 #        propagates
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
 #       :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.activationPotential += inputPropagation
         #trigger forwards propagationnetwork
         if self.activationPotential >= self.forwardPropagationWeight:
-            self.forward_propagate()
+            self.propagate()
         return
 
     def back_propagate(self):
-#        based on weights choose random backwards nodes and propagate to it
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        #TODO: implement back propagation scheme
         pass
 
-    def forward_propagate(self):
-        import random
-#        based on weights choose a random forward node and propagate to it
+    def _node_maintainance(self, *errors):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#       if send and/or recv lists are empty destroy_self
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        trigger = random.random()
-        for node in self.forwardNodes:
-            if trigger <= node[1]
-                #propagate to that node
-                pass
-        return
+        #TODO:log inforandom
 
-    def node_maintainance(self):
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        #TODO: if error critical stop propgram
+
+        #destroy self
+        self.destroy_self()
 
     def output_state(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -171,7 +160,13 @@ class node(object): that is for a forward
 #        output:
 #
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        try:
+            for connection in sendToList:
+                connection.destroy_self()
+
+            for connection in recvFromList:
+                connection.destroy_self()
+
 
 class connection(object):
 #   conection object, used to connect nodes
@@ -190,7 +185,7 @@ class connection(object):
 #    this object should also be able to record itself
 #    changing the recieving node should also be possible, though there is currently
 #    no need to do this and only exists for potential future use -- i.e multiple
-#    receieving nodes?
+#    receieving nodes?ident
 #    the connection also needs to be self maintaining, destroying self in
 #    in the event of the recieving node having been previously deleted and hence
 #    informing the sending node that propagation failed and to initiate propagation
@@ -218,7 +213,7 @@ class connection(object):
         self.connectionStrength = 1.0
         self.propagationTime = 0
         self.propagationStack = []
-        self.ID = sendNode.generateConnectionID() # string of format net$lyr$nd$cn
+        self.ID = sendNode.generate_Connection_ID() # string of format net$lyr$nd$cntn$
         self.propCount = 0
 
     def __repr__(self):
@@ -242,8 +237,7 @@ class connection(object):
             for stackItem in xrange(len(propagationStack)):
                 self.propagationStack[stackItem][0] -= 1
                 if self.propagationStack[stackItem][0] <= 0:
-                    self.initiate_propagation(
-                                        self.propagationStack[stackItem][1])
+                    self.propagate(self.propagationStack[stackItem][1])
                     self.propagationStack.pop(stackItem)
         except Exception as e:
             connection_mainainance(e)
@@ -280,17 +274,17 @@ class connection(object):
 
 
     def output_state(self, *errors):
-#        function to return data about self. should be called
+#        function to return data about self. should be calledrandom
 #        by object above this one, typically the creating node which should then
 #        pass the data up the object heirachy.
 #       __repr__ should call this function and return this information + more
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
+#        input:random
 #        self
 #        output:
 #        returns object comprising of:
 #        self.ID, sendNode.ID, recvNode.ID, self.connectionStrength,
-#        self.propagationTime, self.propCount and  any possible errors
+#        self.propagationTime, self.propCount and  any possible errorsnodes are
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         state  = [self.ID, self.sendNode.ID, self.recvNode.ID,
                 self.ConnectionStrength, self.propagationTime, self.propCount]
@@ -298,7 +292,7 @@ class connection(object):
             state.append(error)
         return state
 
-    def connection_maintainance(self, *errors):
+    def _connection_maintainance(self, *errors):
 #        this function handles maintainance in the case that any other function
 #        throws an exception. typically this means logging error details, raising
 #        the error if critical and then destroying the connection by removing all references
@@ -309,7 +303,7 @@ class connection(object):
 #        output:
 #        error log, sendNode and recvNode informed of connection removal
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #TODO:log info
+        #TODO:log inforandom
 
         #TODO: if error critical stop propgram
 
@@ -328,7 +322,7 @@ class connection(object):
     def destroy_self(self):
 #        this function exsits to destroy an instance of itself, this is achieved
 #        by deleting all reference to this object and letting the garbage collector
-#        do its job
+#        do its jobrandom
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input: self
 #        output:
@@ -408,7 +402,7 @@ class Network(object,Layer):
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    structure:
 #
-#    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::random
 
     def __init__(self, inputList, outputList):
         layerList=[]
