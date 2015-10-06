@@ -55,7 +55,7 @@ class node(object): that is for a forward
 #
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, parentLayer):
-        self.parentID = partentLayer.ID
+        self.parent = partentLayer
         self.ID = parentLayer.generate_Node_ID()
         self.sendToList = []
         self.recvFromList = []
@@ -133,7 +133,9 @@ class node(object): that is for a forward
 
     def _node_maintainance(self, *errors):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#       if send and/or recv lists are empty destroy_self
+#       if send and/or recv lists are empty destroy_self, log any incoming errors
+#       if for some reason a connection leads to a non-existent node then destroy
+#       that connection.
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #TODO:log inforandom
 
@@ -154,18 +156,31 @@ class node(object): that is for a forward
 
     def destroy_self(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        destroy all incoming and outgoing connections then call parent layer to
+#        to remove this node, all references to this should then be deleted and
+#        garbage collector should be able to do its job
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        try:
-            for connection in sendToList:
+        #first delete incoming and outgoing nodes
+        for connection in sendToList:
+            try:
                 connection.destroy_self()
+            except:
+                pass
 
-            for connection in recvFromList:
+        for connection in recvFromList:
+            try:
                 connection.destroy_self()
+            except:
+                pass
+
+        #then call node delete function in parent layer
+        try:
+            self.parentLayer.delete_node(self.ID)
+        except:
+            #TODO: add in critical error logging functionality, if this doesnt work
+            # something has gone wrong
+            pass
+
 
 
 class connection(object):
