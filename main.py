@@ -55,8 +55,8 @@ class node(object): that is for a forward
 #
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, parentLayer):
-        self.parent = partentLayer
         self.ID = parentLayer.generate_Node_ID()
+        self.parent = partentLayer
         self.sendToList = []
         self.recvFromList = []
         self.activationPotential = 0.0
@@ -65,6 +65,13 @@ class node(object): that is for a forward
         self.backwardPropagationWeight = 0.1 #dummy value to be dealt with later
         self.propagationNormal = 0.0
         self.propagationBackwardsNormal = 0.0
+        self.propSendCount = 0 # counter for number of times this node propagates
+        self.propRecvCount = 0 # counter for number of times this node has been
+                                # propagated to
+
+    def update_iteration(self):
+        #TODO: implement this
+        pass
 
     def create_Connection(self,recvNode):
 #        fucntion to create node
@@ -80,12 +87,14 @@ class node(object): that is for a forward
         self.propagationNormal /= len(sendToList)
 
     def remove_recvFrom(self, connectionID):
+#        remove connection with connectionID from recvFromList
         for cntn in xrange(len(recvFromList)):
             if recvFromList[cntn].ID == connectionID:
                 del recvFromList[cntn]
                 return
 
     def remove_sendNode(self,connectionID):
+#       remove connection with connectionID from sendToList
         for cntn in xrange(len(sendToList)):
             if sendToList[cntn][1].ID == connectionID
                 self.propagationNormal * len(sendToList)
@@ -101,6 +110,7 @@ class node(object): that is for a forward
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         trigger = random.random() * self.propagationNormal #random number used to pick which connection to use
         weightTotal = 0.0
+        self.propSendCount += 1 #update counter
         for connection in xrange(len(sendToList)):
             weightTotal += sendToList[connection][0]
             if weightTotal > trigger:
@@ -114,6 +124,7 @@ class node(object): that is for a forward
 #        function to do the actual work
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.self_propagation(sender)
+        self.propRecvCount += 1 #update counter
         return
 
     def self_propagation(self, inputPropagation):
@@ -146,13 +157,30 @@ class node(object): that is for a forward
 
     def output_state(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
+#        input: data about self
+#           should call all incoming and outgoing connections to return data about
+#           themselves.
 #        output:
-#
+#           list object that contains the above information
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        state = [self.ID, self.activationThreshold, self.propagtionWeight,
+            self.propagationNormal, self.propSendCount, self.propRecvCount ]
+            outList = []
+            inList = []
+            for cntn in xrange(len(sendToList)):
+                outList.append([sendToList[0] ,sendToList[cntn][1].output_state()])
+
+            state.append(outList)
+            del outList
+
+            for cntn in xrange(len(recvFromList)):
+                inList.append(recvFromList[cntn].output_state())
+
+            state.append(inList)
+            del inList
+
+            return state
+
 
     def destroy_self(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -349,8 +377,9 @@ class connection(object):
         except Exception as fatal:
             #bad stuff has happened terminate the program
 
-class layer(object):
-#    object describing layer of nodes.
+class layer(object,node):
+#    object describing layer of nodes. just as nodes contain connections, layers
+#    contain nodes
 #    should contain layer metadata and series of nodes
 #    it should be noted that in place of a node an entire network or even layer
 #       can be contained.
