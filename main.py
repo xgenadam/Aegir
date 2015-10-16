@@ -34,7 +34,11 @@ import logging
 #           should network also be responsible for connections?
 #
 #
+#   Completion list:
+#       barebones of node and connection classes (they can function)
+#
 #   MASTER TODO list:
+#       logging & error handling in ALL classes
 
 class node(object):
 #    node object for neural network
@@ -56,7 +60,7 @@ class node(object):
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     def __init__(self, parentLayer):
         self.ID = parentLayer.generate_Node_ID()
-        self.parent = partentLayer
+        self.parentLayer = partentLayer
         self.sendToList = []
         self.recvFromList = []
         self.activationStack = [0.0]
@@ -104,7 +108,7 @@ class node(object):
         for cntn in xrange(len(recvFromList)):
             if recvFromList[cntn].ID == connectionID:
                 del recvFromList[cntn]
-                return
+
 
     def remove_sendNode(self,connectionID):
 #       remove connection with connectionID from sendToList
@@ -395,15 +399,27 @@ class connection(object):
             self.recvNode.remove_connection(self.ID)
             self.sendNode.remove_connection(self.ID)
         except Exception as fatal:
+            pass
             #bad stuff has happened terminate the program
 
-class layer(object,node):
+class layer(object):
 #    object describing layer of nodes. just as nodes contain connections, layers
 #    contain nodes
 #    should contain layer metadata and series of nodes
 #    it should be noted that in place of a node an entire network or even layer
 #       can be contained.
-    def __init__(self, spawnNumber):
+    def __init__(self, spawnNumber, parentNetwork):
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#        internal variables
+#
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        self.ID = parentNetwork.generate_layer_ID()
+        self.parentNetwork = parentNetwork
+        self.nodeList = []
+        for spawn in xrange(spawnNumber):
+            self.spawn_node()
+
+    def update_iteration(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #
@@ -411,27 +427,41 @@ class layer(object,node):
 #        output:
 #
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+
+        #first update all internal nodes
+        for node in xrange(len(self.nodeList)):
+            self.nodeList[node].update_iteration()
+
 
     def spawn_node(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        create node in layer here
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        self.nodeList.append(node(self))
+
+    def delete_node(self, nodeID):
+        #remove reference to node here
+        for node in xrange(len(nodeList)):
+            if nodeList[node].ID == nodeID:
+                del nodeList[node]
 
     def destroy_self(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        call all sub nodes to destroy self then call parent network to remove this layer
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        for nodes in xrange(len(self.nodeList)):
+            try:
+                nodeList[node].destroy_self()
+            except Exception as e:
+                pass
+
+
+        try:
+            self.parentNetwork.destroy_layer(self.ID)
+        except Exception as e:
+            pass
+
+
 
     def output_state(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -458,7 +488,7 @@ class metadata(object):
     #dummy object
     pass
 
-class Network(object,Layer):
+class Network(object):
 #   class describing network, is a derived class of layer class
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    internal variables:____________________________________________________
