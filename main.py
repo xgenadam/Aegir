@@ -25,8 +25,7 @@ import logging
 #           and the connection itself
 #               TODO: formulate propagation formula
 #
-#           TODO: should connections be contained in the netword directly?
-#               or does this deserve a class of its own?
+
 #
 #       network:
 #           network needs to ocntain layers which contain nodes
@@ -35,9 +34,9 @@ import logging
 #           should network also be responsible for connections?
 #
 #
-#   current goals:
+#   MASTER TODO list:
 
-class node(object): that is for a forward
+class node(object):
 #    node object for neural network
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    internal variables:____________________________________________________
@@ -49,7 +48,8 @@ class node(object): that is for a forward
 #       backwards/forwardsPropagationWeight: value this node propagates by
 #       propagationBackwards/ForwardsNormal: total values of forwards/backwards
 #          node activation weights, deciding which nodes to fire based on RNG
-#       TODO: implement iteration stuff
+#       TODO: implement iteration stuff -- done some, want to double check, think
+#               this can be done better.
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #    structure:
 #
@@ -59,6 +59,7 @@ class node(object): that is for a forward
         self.parent = partentLayer
         self.sendToList = []
         self.recvFromList = []
+        self.activationStack = [0.0]
         self.activationPotential = 0.0
         self.activationThreshold = 5.0
         self.propagationWeight = 1.0
@@ -68,10 +69,22 @@ class node(object): that is for a forward
         self.propSendCount = 0 # counter for number of times this node propagates
         self.propRecvCount = 0 # counter for number of times this node has been
                                 # propagated to
+        self.relaxationTime = 0 # after node propagates cannot fire for a number
+                                # of iterations equal to relaxationTime
 
     def update_iteration(self):
-        #TODO: implement this
-        pass
+#       Function to handle iteration update procedure
+#       first call connection internal update functions
+#       then test to see whether node should propagate or not
+        for cntn in xrange(len(sendToList)):
+            sendToList[cntc].update_iteration()
+
+        #done this way so that can add in functionality later
+        for activation in xrange(len(self.activationStack)):
+            if activation > 0:
+                self.propagate()
+                self.activationStack[activation] = 0
+
 
     def create_Connection(self,recvNode):
 #        fucntion to create node
@@ -123,7 +136,8 @@ class node(object): that is for a forward
 #        node recieves propagation, currently a dummy function that calls another
 #        function to do the actual work
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.self_propagation(sender)
+        #self.self_propagation(sender)
+
         self.propRecvCount += 1 #update counter
         return
 
@@ -135,7 +149,8 @@ class node(object): that is for a forward
         self.activationPotential += inputPropagation
         #trigger forwards propagationnetwork
         if self.activationPotential >= self.forwardPropagationWeight:
-            self.propagate()
+            self.activationStack[0] += 1 # done this way so that if multiple triggers
+                                        # in single iteration can maybe do somethin different
         return
 
     def back_propagate(self):
@@ -164,7 +179,8 @@ class node(object): that is for a forward
 #           list object that contains the above information
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         state = [self.ID, self.activationThreshold, self.propagtionWeight,
-            self.propagationNormal, self.propSendCount, self.propRecvCount ]
+            self.propagationNormal, self.relaxationTime, self.propSendCount,
+             self.propRecvCount ]
             outList = []
             inList = []
             for cntn in xrange(len(sendToList)):
@@ -180,6 +196,10 @@ class node(object): that is for a forward
             del inList
 
             return state
+
+    def generate_Connection_ID(self):
+        #give a connection a unique id in string format net$lyr$nd$cntn$
+        return self.ID + '$' + str(len(sendToList))
 
 
     def destroy_self(self):
@@ -309,7 +329,7 @@ class connection(object):
 #        output:
 #        calls associated reciever node's internal update function
 #        returns nothing
-#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::agation
         try:
             self.recvNode.recieve_propagation(nodePropagationValue)
         except Exception as e: #TODO: add error codes, if recvNode does not recieve initiaite
@@ -365,7 +385,7 @@ class connection(object):
     def destroy_self(self):
 #        this function exsits to destroy an instance of itself, this is achieved
 #        by deleting all reference to this object and letting the garbage collector
-#        do its jobrandom
+#        do its jobrandomagationthat is for a forward
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input: self
 #        output:
