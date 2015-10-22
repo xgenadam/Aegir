@@ -58,8 +58,8 @@ class node(object):
 #    structure:
 #
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, parentLayer):
-        self.ID = parentLayer.generate_Node_ID()
+    def __init__(self, parentLayer, ID="nd00"):
+        self.ID = ID
         self.parentLayer = partentLayer
         self.sendToList = []
         self.recvFromList = []
@@ -99,7 +99,8 @@ class node(object):
 #        add connection data to node
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.propagationNormal * len(sendToList)
-        self.sendToList.append( [1.0, connection(self, recvNode)] )
+        self.sendToList.append( [1.0, connection(self, recvNode,
+                                        self.generate_Connetion_ID())] )
         self.propagationNormal += 1.0
         self.propagationNormal /= len(sendToList)
 
@@ -203,7 +204,8 @@ class node(object):
 
     def generate_Connection_ID(self):
         #give a connection a unique id in string format net$lyr$nd$cntn$
-        return self.ID + '$' + str(len(sendToList))
+        #TODO: change this as can result in  name clashes
+        return self.ID + 'cntn' + str(len(sendToList))
 
 
     def destroy_self(self):
@@ -260,7 +262,7 @@ class connection(object):
 #   TODO: implement extensive error handling
 #         add logging functionality
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, sendNode, recvNode):
+    def __init__(self, sendNode, recvNode, ID="cntn00"):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        input:
 #        sendNode -- sender node, is type node object
@@ -280,7 +282,7 @@ class connection(object):
         self.connectionStrength = 1.0
         self.propagationTime = 0
         self.propagationStack = []
-        self.ID = sendNode.generate_Connection_ID() # string of format net$lyr$nd$cntn$
+        self.ID = ID # string of format net$lyr$nd$cntn$
         self.propCount = 0
 
     def __repr__(self):
@@ -408,12 +410,11 @@ class layer(object):
 #    should contain layer metadata and series of nodes
 #    it should be noted that in place of a node an entire network or even layer
 #       can be contained.
-    def __init__(self, spawnNumber, parentNetwork):
+    def __init__(self, spawnNumber, parentNetwork, ID="lyr00"):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #        internal variables
-#
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.ID = parentNetwork.generate_layer_ID()
+        self.ID = ID
         self.parentNetwork = parentNetwork
         self.nodeList = []
         for spawn in xrange(spawnNumber):
@@ -421,11 +422,7 @@ class layer(object):
 
     def update_iteration(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        iteration component
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         #first update all internal nodes
@@ -461,25 +458,25 @@ class layer(object):
         except Exception as e:
             pass
 
+    def generate_Node_ID(self):
+#       generate ID for sub nodes, net$lyr$nd$cntn$
+        #TODO: change this as can result in  name clashes
+        return self.ID + 'nd' + str(len(nodeList))
 
 
     def output_state(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        output state function
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
+        state = []
+        for node in xrange(len(nodeList)):
+            state.append(nodeList[node].output_state())
+
+        return [self.ID, len(nodeList), state]
 
     def layer_maintainance(self):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#        input:
-#
-#
-#        output:
-#
+#        layer maintainance protocol TODO: implement this
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     pass
 
@@ -498,7 +495,9 @@ class Network(object):
 #
 #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::random
 
-    def __init__(self, inputList, outputList):
+    def __init__(self, inputList, outputList, ID='ntwk00'):
+
+        self.ID = ID
         layerList=[]
         create_input_layer(inputList)
         create_output_layer(outputList)
@@ -515,6 +514,7 @@ class Network(object):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pass
 
+
     def create_output_layer(self, outputList):
 #        create the initial output layer
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -526,7 +526,13 @@ class Network(object):
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pass
 
-    def create_new_layer(parameterDefinition, layerLocation):
+    def generate_layer_ID(self):
+#       generate ID for sub nodes, net$lyr$nd$cntn$
+        #TODO: change this as can result in  name clashes
+        return self.ID + 'lyr' + str(len(nodeList))
+
+
+    def create_new_layer(parameterDefinition, layerLocation=-1):
 #        create a layer in between input layer and output layer
 #
 #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
