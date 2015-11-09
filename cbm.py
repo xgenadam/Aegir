@@ -39,6 +39,8 @@ import logging
 #
 #   MASTER TODO list:
 #       logging & error handling in ALL classes
+#           A note on errors, this needs to be done as multi-threading will introduce
+#           complexity to code and likely introduce errors that way
 
 class node(object):
     #    node object for neural network
@@ -118,7 +120,7 @@ class node(object):
                 del sendToList[cntc]
                 self.propagationNormal /= len(sendToList)
 
-    def propagate(self):
+    def random_propagate(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #node propagates to another node
         #pick a connection and call its propagation function
@@ -132,6 +134,15 @@ class node(object):
                 sendToList[connection][1].initiate_propagation(
                     self.propagationWeight)
                 break
+
+    def propagate(self):
+        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        #node propagates to all other nodes
+        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        self.propSendCount += 1 #update counter
+        for connection in xrange(len(sendToList)):
+            sendToList[connection][1].initiate_propagation(self.propagationWeight)
+
 
     def recieve_propagation(self, sender):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -271,7 +282,7 @@ class connection(object):
     #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.sendNode = sendNode
         self.recvNode = recvNode
-        self.connectionStrength = connectionStrength
+        self.weight = weight
         self.propagationTime = 0
         self.propagationStack = []
         self.ID = ID # string of format net$lyr$nd$cntn$
@@ -315,7 +326,7 @@ class connection(object):
         try:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             self.propagationStack.append([self.propagationTime,
-                                                nodePropagationValue])
+                                        nodePropagationValue * self.weight])
         except Exception as e:
             connection_mainainance(e)
 
