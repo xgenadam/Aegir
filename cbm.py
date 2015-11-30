@@ -15,6 +15,7 @@ import logging
 #           layers call nodes etc
 #
 #       TODO: introduce iteration component to strucure simultaneous firings
+#       TODO: put in some decorators to make code neater
 #
 #       nodes and connections:
 #           when a node receives a total sum above a certain threshold it will
@@ -61,7 +62,7 @@ class node(object):
     #    structure:
     #
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, parentLayer=None, ID="nd00", *args, **kwargs):
+    def __init__(self, ID="nd00", parentLayer=None, *args, **kwargs):
         self.ID = ID
         self.parentLayer = parentLayer
         self.sendToList = []
@@ -69,10 +70,8 @@ class node(object):
         self.activationStack = [0.0]#this is to take into account multiple propagations if need be
         self.activationPotential = 0.0 #this is the value that gets increased when this node is propagated to
         self.activationThreshold = 1.0 #this is the threshold for the node to propagate
-        self.propagationWeight = 1.0
-        self.backwardPropagationWeight = 0.1 #dummy value to be dealt with later
+        self.propagationWeight = 1.0 #scale the propagation of outgoing connections
         self.propagationNormal = 0.0 #normalization for choosing which connection to propagate along
-        self.propagationBackwardsNormal = 0.0
         self.propSendCount = 0 # counter for number of times this node propagates
         self.propRecvCount = 0 # counter for number of times this node has been
                                 # propagated to
@@ -81,11 +80,11 @@ class node(object):
 
     def update_iteration(self):
        #Function to handle iteration update procedure
-       #first call connection internal update functions
+       #first call incoming connection internal update function
        #then test to see whether node should propagate or not
         #try:
-        for cntn in xrange(len(self.sendToList)):
-            self.sendToList[cntn][1].update_iteration()
+        for cntn in xrange(len(self.recvFromList)):
+            self.recvFromList[cntn].update_iteration()
 
         #done this way so that can add in functionality later
         for activation in xrange(len(self.activationStack)):
@@ -95,8 +94,9 @@ class node(object):
         #except:
         #    pass
         #this works for now
-        if self.activationPotentail >= self.activationThreshold:
+        if self.activationPotential >= self.activationThreshold:
             self.propagate()
+            self.activationPotential = 0.0
 
 
     def create_connection(self,recvNode, connectionWeight=1.0, *args, **kwargs):
@@ -151,13 +151,13 @@ class node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #try:
         self.propSendCount += 1 #update counter
-        for connection in xrange(len(sendToList)):
+        for connection in xrange(len(self.sendToList)):
             self.sendToList[connection][1].initiate_propagation(self.propagationWeight)
         #except:
         #    pass
 
 
-    def receive_propagation(self, connectionWeight, sender=None):
+    def receive_propagation(self, connectionWeight, sender=None, *args, **kwargs):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #node receives propagation, currently a dummy function that calls another
         #function to do the actual work
@@ -165,7 +165,6 @@ class node(object):
         #self.self_propagation(sender)
         self.propRecvCount += 1 #update counter
         self.activationPotential += connectionWeight
-        return
 
     def self_propagation(self, inputPropagation):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -177,7 +176,6 @@ class node(object):
         if self.activationPotential >= self.forwardPropagationWeight:
             self.activationStack[0] += 1 # done this way so that if multiple triggers
                                         # in single iteration can maybe do somethin different
-        return
 
     def back_propagate(self):
         #TODO: implement back propagation scheme
@@ -278,7 +276,7 @@ class connection(object):
     #   TODO: implement extensive error handling
     #         add logging functionality
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, sendNode, recvNode, ID="cntn00",  connectionWeight=1.0):
+    def __init__(self, sendNode, recvNode, ID="cntn00",  connectionWeight=1.0, *args, **kwargs):
     #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     #        input:
     #        sendNode -- sender node, is type node object
@@ -295,6 +293,7 @@ class connection(object):
     #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         self.sendNode = sendNode
         self.recvNode = recvNode
+        recvNode.recvFromList.append(self)
         self.weight = connectionWeight
         self.propagationTime = 0
         self.propagationStack = []
@@ -337,11 +336,11 @@ class connection(object):
         #appends propagation to stack
         #returns nothing
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        try:
-            self.propagationStack.append([self.propagationTime,
-                                        nodePropagationValue * self.weight])
-        except Exception as e:
-            connection_mainainance(e)
+        #try:
+        self.propagationStack.append([self.propagationTime,
+                                    nodePropagationValue * self.weight])
+        #except Exception as e:
+        #    connection_mainainance(e)
 
 
     def propagate(self,nodePropagationValue):
@@ -352,10 +351,10 @@ class connection(object):
         #calls associated receiver node's internal update function
         #returns nothing
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::agation
-        try:
-            self.recvNode.receive_propagation(nodePropagationValue)
-        except Exception as e: #TODO: add error codes, if recvNode does not receive initiaite
-            connection_mainainance(e)           # maintainance function
+        #try:
+        self.recvNode.receive_propagation(nodePropagationValue)
+        #except Exception as e: #TODO: add error codes, if recvNode does not receive initiaite
+        #    connection_mainainance(e)           # maintainance function
 
 
     def output_state(self, *errors):
@@ -440,18 +439,18 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         #first update all internal nodes
-        try:
-            for node in xrange(len(self.nodeList)):
-                self.nodeList[node].update_iteration()
-        except:
-            pass
+        #try:
+        for node in xrange(len(self.nodeList)):
+            self.nodeList[node].update_iteration()
+        #except:
+        #    pass
 
 
     def spawn_node(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #create node in layer here
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.nodeList.append(node(self, self.generate_Node_ID))
+        self.nodeList.append(node(self.generate_Node_ID(), self))
 
     def delete_node(self, nodeID):
         #remove reference to node here
@@ -553,11 +552,11 @@ class Network(object):
 
     def update_iteration(self):
         #call update functions in all layers
-        try:
-            for layer in xrange(len(self.layerList)):
-                self.layerList[layer].update_iteration()
-        except:
-            pass
+        #try:
+        for layer in xrange(len(self.layerList)):
+            self.layerList[layer].update_iteration()
+        #except:
+        #    pass
 
     def network_maintainance(self):
         #test network to ensure it can be completed and find any "dead"
