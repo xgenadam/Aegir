@@ -82,17 +82,17 @@ class node(object):
        #Function to handle iteration update procedure
        #first call incoming connection internal update function
        #then test to see whether node should propagate or not
-        #try:
-        for cntn in xrange(len(self.recvFromList)):
-            self.recvFromList[cntn].update_iteration()
+        try:
+            for cntn in xrange(len(self.recvFromList)):
+                self.recvFromList[cntn].update_iteration()
 
-        #done this way so that can add in functionality later
-        for activation in xrange(len(self.activationStack)):
-            if activation > 0:
-                self.propagate()
-                self.activationStack.pop(activation)
-        #except:
-        #    pass
+            #done this way so that can add in functionality later
+            for activation in xrange(len(self.activationStack)):
+                if activation > 0:
+                    self.propagate()
+                    self.activationStack.pop(activation)
+        except:
+            pass
         #this works for now
         if self.activationPotential >= self.activationThreshold:
             self.propagate()
@@ -149,12 +149,12 @@ class node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #node propagates along all outgoing connections
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #try:
-        self.propSendCount += 1 #update counter
-        for connection in xrange(len(self.sendToList)):
-            self.sendToList[connection][1].initiate_propagation(self.propagationWeight)
-        #except:
-        #    pass
+        try:
+            self.propSendCount += 1 #update counter
+            for connection in xrange(len(self.sendToList)):
+                self.sendToList[connection][1].initiate_propagation(self.propagationWeight)
+        except:
+           pass
 
 
     def receive_propagation(self, connectionWeight, sender=None, *args, **kwargs):
@@ -162,7 +162,6 @@ class node(object):
         #node receives propagation, currently a dummy function that calls another
         #function to do the actual work
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #self.self_propagation(sender)
         self.propRecvCount += 1 #update counter
         self.activationPotential += connectionWeight
 
@@ -317,14 +316,14 @@ class connection(object):
         #output:
         #returns none
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #try:
-        for stackItem in xrange(len(self.propagationStack)):
-            self.propagationStack[stackItem][0] -= 1
-            if self.propagationStack[stackItem][0] <= 0:
-                self.propagate(self.propagationStack[stackItem][1])
-                self.propagationStack.pop(stackItem)
-        #except Exception as e:
-        #    connection_mainainance(e)
+        try:
+            for stackItem in xrange(len(self.propagationStack)):
+                self.propagationStack[stackItem][0] -= 1
+                if self.propagationStack[stackItem][0] <= 0:
+                    self.propagate(self.propagationStack[stackItem][1])
+                    self.propagationStack.pop(stackItem)
+        except Exception as e:
+           connection_mainainance(e)
 
 
     def initiate_propagation(self,nodePropagationValue):
@@ -336,11 +335,11 @@ class connection(object):
         #appends propagation to stack
         #returns nothing
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #try:
-        self.propagationStack.append([self.propagationTime,
-                                    nodePropagationValue * self.weight])
-        #except Exception as e:
-        #    connection_mainainance(e)
+        try:
+            self.propagationStack.append([self.propagationTime,
+                                        nodePropagationValue * self.weight])
+        except Exception as e:
+           connection_mainainance(e)
 
 
     def propagate(self,nodePropagationValue):
@@ -351,10 +350,10 @@ class connection(object):
         #calls associated receiver node's internal update function
         #returns nothing
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::agation
-        #try:
-        self.recvNode.receive_propagation(nodePropagationValue)
-        #except Exception as e: #TODO: add error codes, if recvNode does not receive initiaite
-        #    connection_mainainance(e)           # maintainance function
+        try:
+            self.recvNode.receive_propagation(nodePropagationValue)
+        except Exception as e: #TODO: add error codes, if recvNode does not receive initiaite
+           connection_mainainance(e)           # maintainance function
 
 
     def output_state(self, *errors):
@@ -439,11 +438,11 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         #first update all internal nodes
-        #try:
-        for node in xrange(len(self.nodeList)):
-            self.nodeList[node].update_iteration()
-        #except:
-        #    pass
+        try:
+            for node in xrange(len(self.nodeList)):
+                self.nodeList[node].update_iteration()
+        except:
+           pass
 
 
     def spawn_node(self):
@@ -552,11 +551,11 @@ class Network(object):
 
     def update_iteration(self):
         #call update functions in all layers
-        #try:
-        for layer in xrange(len(self.layerList)):
-            self.layerList[layer].update_iteration()
-        #except:
-        #    pass
+        try:
+            for layer in xrange(len(self.layerList)):
+                self.layerList[layer].update_iteration()
+        except:
+           pass
 
     def network_maintainance(self):
         #test network to ensure it can be completed and find any "dead"
