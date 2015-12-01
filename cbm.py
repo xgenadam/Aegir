@@ -2,6 +2,10 @@
 import math
 import random
 import logging
+import traceback
+
+
+logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 
 #   code structure:
 #       Basic: network contains layers, layers contains nodes
@@ -14,20 +18,12 @@ import logging
 #           network function returns metadata and calls layers to do same,
 #           layers call nodes etc
 #
-#       TODO: introduce iteration component to strucure simultaneous firings
-#       TODO: put in some decorators to make code neater
 #
 #       nodes and connections:
 #           when a node receives a total sum above a certain threshold it will
-#           then propagate to a random node among those it is connected to.
+#           then propagate to all nodes among those it is connected to.
 #
-#           the node propagated to will be chosen randomly based on a weighted
-#           connection. the 'signal' propagated will be based on an internal weight
-#           and the connection itself
-#               TODO: formulate propagation formula
-#                     |-currently propagating along all connections
 #
-
 #
 #       network:
 #           network needs to ocntain layers which contain nodes
@@ -40,9 +36,7 @@ import logging
 #       barebones of node and connection classes (they can function)
 #
 #   MASTER TODO list:
-#       logging & error handling in ALL classes
-#           A note on errors, this needs to be done as multi-threading will introduce
-#           complexity to code and likely introduce errors that way
+#       more readable function to create connections manually
 
 class node(object):
     #    node object for neural network
@@ -67,16 +61,11 @@ class node(object):
         self.parentLayer = parentLayer
         self.sendToList = []
         self.recvFromList = []
-        self.activationStack = [0.0]#this is to take into account multiple propagations if need be
         self.activationPotential = 0.0 #this is the value that gets increased when this node is propagated to
         self.activationThreshold = 1.0 #this is the threshold for the node to propagate
         self.propagationWeight = 1.0 #scale the propagation of outgoing connections
-        self.propagationNormal = 0.0 #normalization for choosing which connection to propagate along
-        self.propSendCount = 0 # counter for number of times this node propagates
-        self.propRecvCount = 0 # counter for number of times this node has been
-                                # propagated to
-        self.relaxationTime = 0 # after node propagates cannot fire for a number
-                                # of iterations equal to relaxationTime
+        self.propSendCount = 0 # counter
+        self.propRecvCount = 0 # counter
 
     def update_iteration(self):
        #Function to handle iteration update procedure
@@ -86,18 +75,15 @@ class node(object):
             for cntn in xrange(len(self.recvFromList)):
                 self.recvFromList[cntn].update_iteration()
 
-            #done this way so that can add in functionality later
-            for activation in xrange(len(self.activationStack)):
-                if activation > 0:
-                    self.propagate()
-                    self.activationStack.pop(activation)
-        except:
-            pass
+        except Exception as e:
         #this works for now
-        if self.activationPotential >= self.activationThreshold:
-            self.propagate()
-            self.activationPotential = 0.0
-
+            logging.debug([traceback.print_stack,e])
+        try:
+            if self.activationPotential >= self.activationThreshold:
+                self.propagate()
+                self.activationPotential = 0.0
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def create_connection(self,recvNode, connectionWeight=1.0, *args, **kwargs):
         #fucntion to create node
@@ -107,43 +93,33 @@ class node(object):
         #output:
         #add connection data to node
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.propagationNormal * len(self.sendToList)
-        self.sendToList.append( [1.0, connection(self,
-                                        recvNode,
-                                        self.generate_Connection_ID(),
-                                        connectionWeight)] )
-        self.propagationNormal += 1.0
-        self.propagationNormal /= len(self.sendToList)
+        try:
+            self.sendToList.append(
+                        connection(recvNode,
+                                    self,
+                                    self.generate_Connection_ID(),
+                                    connectionWeight) )
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def remove_recvFrom(self, connectionID):
         #remove connection with connectionID from recvFromList
-        for cntn in xrange(len(self.recvFromList)):
-            if self.recvFromList[cntn].ID == connectionID:
-                del self.recvFromList[cntn]
+        try:
+            for cntn in xrange(len(self.recvFromList)):
+                if self.recvFromList[cntn].ID == connectionID:
+                    del self.recvFromList[cntn]
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def remove_sendNode(self,connectionID):
-       #remove connection with connectionID from sendToList
-        for cntn in xrange(len(sendToList)):
-            if sendToList[cntn][1].ID == connectionID:
-                self.propagationNormal * len(sendToList)
-                self.propagationNormal -= sendToList[cntn][0]
-                del sendToList[cntc]
-                self.propagationNormal /= len(sendToList)
+        #remove connection with connectionID from sendToList
+        try:
+            for cntn in xrange(len(sendToList)):
+                if sendToList[cntn].ID == connectionID:
+                    del self.sendToList[cntc]
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
-    def random_propagate(self):
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #node propagates to another node
-        #pick a connection and call its propagation function
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        trigger = random.random() * self.propagationNormal #random number used to pick which connection to use
-        weightTotal = 0.0
-        self.propSendCount += 1 #update counter
-        for connection in xrange(len(self.sendToList)):
-            weightTotal += self.sendToList[connection][0]
-            if weightTotal > trigger:
-                self.sendToList[connection][1].initiate_propagation(
-                    self.propagationWeight)
-                break
 
     def propagate(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -152,9 +128,9 @@ class node(object):
         try:
             self.propSendCount += 1 #update counter
             for connection in xrange(len(self.sendToList)):
-                self.sendToList[connection][1].initiate_propagation(self.propagationWeight)
-        except:
-           pass
+                self.sendToList[connection].initiate_propagation(self.propagationWeight)
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
 
     def receive_propagation(self, connectionWeight, sender=None, *args, **kwargs):
@@ -162,23 +138,11 @@ class node(object):
         #node receives propagation, currently a dummy function that calls another
         #function to do the actual work
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.propRecvCount += 1 #update counter
-        self.activationPotential += connectionWeight
-
-    def self_propagation(self, inputPropagation):
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #after other node propagates to this node test whether this node
-        #propagates
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.activationPotential += inputPropagation
-        #trigger forwards propagationnetwork
-        if self.activationPotential >= self.forwardPropagationWeight:
-            self.activationStack[0] += 1 # done this way so that if multiple triggers
-                                        # in single iteration can maybe do somethin different
-
-    def back_propagate(self):
-        #TODO: implement back propagation scheme
-        pass
+        try:
+            self.propRecvCount += 1 #update counter
+            self.activationPotential += connectionWeight
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def _node_maintainance(self, *errors):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -199,29 +163,35 @@ class node(object):
         #output:
         #   list object that contains the above information
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        state = [self.ID, self.activationThreshold, self.propagationWeight,
-            self.propagationNormal, self.relaxationTime, self.propSendCount,
-             self.propRecvCount ]
-        outList = []
-        inList = []
-        for cntn in xrange(len(self.sendToList)):
-            outList.append([self.sendToList[0] ,self.sendToList[cntn][1].output_state()])
+        try:
+            state = [self.ID, self.activationThreshold, self.propagationWeight,
+                self.propagationNormal, self.relaxationTime, self.propSendCount,
+                 self.propRecvCount ]
+            outList = []
+            inList = []
+            for cntn in xrange(len(self.sendToList)):
+                outList.append(self.sendToList[cntn].output_state())
 
-        state.append(outList)
-        del outList
+            state.append(outList)
+            del outList
 
-        for cntn in xrange(len(self.recvFromList)):
-            inList.append(self.recvFromList[cntn].output_state())
+            for cntn in xrange(len(self.recvFromList)):
+                inList.append(self.recvFromList[cntn].output_state())
 
-        state.append(inList)
-        del inList
+            state.append(inList)
+            del inList
 
-        return state
+            return state
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def generate_Connection_ID(self):
         #give a connection a unique id in string format net$lyr$nd$cntn$
         #TODO: change this as can result in  name clashes
-        return str(self.ID) + 'cntn' + str(len(self.sendToList))
+        try:
+            return str(self.ID) + 'cntn' + str(len(self.sendToList))
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def destroy_self(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -233,22 +203,20 @@ class node(object):
         #for connection in self.sendToList:
         try:
             connection.destroy_self()
-        except:
-            pass
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
         for connection in self.recvFromList:
             try:
                 connection.destroy_self()
-            except:
-                pass
+            except Exception as e:
+                logging.debug([traceback.print_stack,e])
 
         #then call node delete function in parent layer
         try:
             self.parentLayer.delete_node(self.ID)
-        except:
-            #TODO: add in critical error logging functionality, if this doesnt work
-            # something has gone wrong
-            pass
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
 class connection(object):
     #   conection object, used to connect nodes
@@ -272,10 +240,9 @@ class connection(object):
     #    in the event of the recieving node having been previously deleted and hence
     #    informing the sending node that propagation failed and to initiate propagation
     #    again.
-    #   TODO: implement extensive error handling
-    #         add logging functionality
+    #   TODO: error handling and logging
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, sendNode, recvNode, ID="cntn00",  connectionWeight=1.0, *args, **kwargs):
+    def __init__(self, recvNode, sendNode=None, ID="cntn00",  connectionWeight=1.0, *args, **kwargs):
     #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     #        input:
     #        sendNode -- sender node, is type node object
@@ -303,7 +270,10 @@ class connection(object):
         #defined output of self, should be similar to output state function but
         #nuanced for different conext. primarily output state is to be used for
         #more rigorous diagnostics and may be expanded upon later.
-        return self.output_state() # this will do for now but can be expanded upon later
+        try:
+            return self.output_state() # this will do for now but can be expanded upon later
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def update_iteration(self):
         #function for dealing with networking timestep at connection level
@@ -323,7 +293,7 @@ class connection(object):
                     self.propagate(self.propagationStack[stackItem][1])
                     self.propagationStack.pop(stackItem)
         except Exception as e:
-           connection_mainainance(e)
+            logging.debug([traceback.print_stack,e])
 
 
     def initiate_propagation(self,nodePropagationValue):
@@ -339,8 +309,7 @@ class connection(object):
             self.propagationStack.append([self.propagationTime,
                                         nodePropagationValue * self.weight])
         except Exception as e:
-           connection_mainainance(e)
-
+            logging.debug([traceback.print_stack,e])
 
     def propagate(self,nodePropagationValue):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -352,9 +321,9 @@ class connection(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::agation
         try:
             self.recvNode.receive_propagation(nodePropagationValue)
-        except Exception as e: #TODO: add error codes, if recvNode does not receive initiaite
-           connection_mainainance(e)           # maintainance function
-
+            self.propCount += 1
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def output_state(self, *errors):
         #function to return data about self. should be calledrandom
@@ -392,14 +361,6 @@ class connection(object):
         #destroy self
         self.destroy_self()
 
-    def change_recvID(self):
-        #this function is not needed currently but may be needed for future implementation
-        #such as mutating one node into two or into a subnetwork or sublayer
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #dummy function not in use
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
-
     def destroy_self(self):
         #this function exsits to destroy an instance of itself, this is achieved
         #by deleting all reference to this object and letting the garbage collector
@@ -412,6 +373,8 @@ class connection(object):
         try:
             self.recvNode.remove_connection(self.ID)
             self.sendNode.remove_connection(self.ID)
+            del self.recvNode
+            del self.sendNode
         except Exception as fatal:
             pass
             #bad stuff has happened terminate the program
@@ -441,21 +404,27 @@ class layer(object):
         try:
             for node in xrange(len(self.nodeList)):
                 self.nodeList[node].update_iteration()
-        except:
-           pass
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
 
     def spawn_node(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #create node in layer here
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.nodeList.append(node(self.generate_Node_ID(), self))
+        try:
+            self.nodeList.append(node(self.generate_Node_ID(), self))
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def delete_node(self, nodeID):
         #remove reference to node here
-        for node in xrange(len(self.nodeList)):
-            if self.nodeList[node].ID == nodeID:
-                del self.nodeList[node]
+        try:
+            for node in xrange(len(self.nodeList)):
+                if self.nodeList[node].ID == nodeID:
+                    del self.nodeList[node]
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def destroy_self(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -465,13 +434,13 @@ class layer(object):
             try:
                 self.nodeList[node].destroy_self()
             except Exception as e:
-                pass
+                logging.debug([traceback.print_stack,e])
 
 
         try:
             self.parentNetwork.destroy_layer(self.ID)
         except Exception as e:
-            pass
+            logging.debug([traceback.print_stack,e])
 
     def generate_Node_ID(self):
        #generate ID for sub nodes, net$lyr$nd$cntn$
@@ -483,11 +452,14 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #output state function
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        state = []
-        for node in xrange(len(nodeList)):
-            state.append(nodeList[node].output_state())
+        try:
+            state = []
+            for node in xrange(len(nodeList)):
+                state.append(nodeList[node].output_state())
 
-        return [self.ID, len(self.nodeList), state]
+            return [self.ID, len(self.nodeList), state]
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def layer_maintainance(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -524,8 +496,11 @@ class Network(object):
         #input: numNodes
         #output: layer object consisting of number of nodes equal to numNodes
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.layerList[0] = layer(numNodes, self, self.ID + 'lyrI')
-        self.input = self.layerList[0]
+        try:
+            self.layerList[0] = layer(numNodes, self, self.ID + 'lyrI')
+            self.input = self.layerList[0]
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def create_output_layer(self, numNodes=0):
         #create the initial output layer
@@ -533,13 +508,19 @@ class Network(object):
         #input:
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.layerList[-1] = layer(numNodes, self, self.ID + 'lyrO')
-        self.output = self.layerList[-1]
+        try:
+            self.layerList[-1] = layer(numNodes, self, self.ID + 'lyrO')
+            self.output = self.layerList[-1]
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def generate_layer_ID(self):
        #generate ID for sub nodes, net$lyr$nd$cntn$
         #TODO: change this as can result in  name clashes
-        return self.ID + 'lyr' + str(len(self.nodeList) -1)
+        try:
+            return self.ID + 'lyr' + str(len(self.nodeList) -1)
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def create_new_layer(self, numNodes, layerLocation=-1):
         #create a layer in between input layer and output layer
@@ -547,27 +528,34 @@ class Network(object):
         #input:
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        self.layerList.insert(layerLocation, layer(numNodes, None, generate_later_ID()) )
+        try:
+            self.layerList.insert(layerLocation, layer(numNodes, self, self.generate_layer_ID()) )
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def update_iteration(self):
         #call update functions in all layers
         try:
             for layer in xrange(len(self.layerList)):
                 self.layerList[layer].update_iteration()
-        except:
-           pass
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
+
+
+    def retina(self, *args, **kwargs):
+        #easier way to pass information to the input layer
+        try:
+            for arg in xrange(len(args)):
+                self.input.nodeList[arg].receive_propagation(args[arg])
+                # logging.info(str(arg), str(args[arg]))
+        except Exception as e:
+            logging.debug([traceback.print_stack,e])
+
+
 
     def network_maintainance(self):
-        #test network to ensure it can be completed and find any "dead"
+        #test network to ensure it can be completed and find any "dead" 
         #nodes where there are no incoming or outgoing connections
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        #input:
-        #output:
-        #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
-
-    def increase_complexity(self):
-        #function is WIP and details will be added later
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #input:
         #output:
