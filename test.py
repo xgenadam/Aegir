@@ -5,7 +5,6 @@ import copy
 
 
 
-
 class test_basic_logic_gates(unittest.TestCase):
     #generate basic logic gates and test reason for this is
     def setUp(self):
@@ -45,6 +44,8 @@ class test_basic_logic_gates(unittest.TestCase):
         XorHiddenLayer[0].create_connection(XorOutputLayer[0], 1.0)
         XorHiddenLayer[1].create_connection(XorOutputLayer[0], -2)
         XorHiddenLayer[2].create_connection(XorOutputLayer[0], 1.0)
+
+        f = open("xor_network", "w")
 
     #first test if and gate works
     def test_and(self):

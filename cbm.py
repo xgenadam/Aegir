@@ -165,10 +165,9 @@ class node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             state = [self.ID, self.activationThreshold, self.propagationWeight,
-                self.propagationNormal, self.relaxationTime, self.propSendCount,
-                 self.propRecvCount ]
-            outList = []
-            inList = []
+                 self.propSendCount, self.propRecvCount ]
+            outList = ['output list']
+            inList = ['input list']
             for cntn in xrange(len(self.sendToList)):
                 outList.append(self.sendToList[cntn].output_state())
 
@@ -338,11 +337,12 @@ class connection(object):
         #self.ID, sendNode.ID, recvNode.ID, self.connectionStrength,
         #self.propagationTime, self.propCount and  any possible errorsnodes are
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        state  = [self.ID, self.sendNode.ID, self.recvNode.ID,
-                self.ConnectionStrength, self.propagationTime, self.propCount]
-        for error in errors:
-            state.append(error)
-        return state
+        try:
+            state  = [self.ID, self.sendNode.ID, self.recvNode.ID, self.weight,
+                    self.propagationTime, self.propCount]
+            return state
+        except exception as e:
+            logging.debug([traceback.print_stack,e])
 
     def _connection_maintainance(self, *errors):
         #this function handles maintainance in the case that any other function
@@ -393,7 +393,7 @@ class layer(object):
         self.parentNetwork = parentNetwork
         self.nodeList = []
         for spawn in xrange(spawnNumber):
-            self.spawn_node()
+            self.create_node()
 
     def update_iteration(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -408,7 +408,7 @@ class layer(object):
             logging.debug([traceback.print_stack,e])
 
 
-    def spawn_node(self):
+    def create_node(self):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #create node in layer here
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -454,8 +454,8 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             state = []
-            for node in xrange(len(nodeList)):
-                state.append(nodeList[node].output_state())
+            for node in xrange(len(self.nodeList)):
+                state.append(self.nodeList[node].output_state())
 
             return [self.ID, len(self.nodeList), state]
         except Exception as e:
@@ -466,10 +466,6 @@ class layer(object):
         #layer maintainance protocol TODO: implement this
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pass
-
-class metadata(object):
-    #dummy object
-    pass
 
 class Network(object):
     #   class describing network, is a derived class of layer class
@@ -518,7 +514,7 @@ class Network(object):
        #generate ID for sub nodes, net$lyr$nd$cntn$
         #TODO: change this as can result in  name clashes
         try:
-            return self.ID + 'lyr' + str(len(self.nodeList) -1)
+            return self.ID + 'lyr' + str(len(self.layerList) -1)
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -554,7 +550,7 @@ class Network(object):
 
 
     def network_maintainance(self):
-        #test network to ensure it can be completed and find any "dead" 
+        #test network to ensure it can be completed and find any "dead"
         #nodes where there are no incoming or outgoing connections
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #input:
@@ -569,8 +565,13 @@ class Network(object):
         #input:
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        pass
-
+        try:
+            state = []
+            for layer in xrange(len(self.layerList)):
+                state.append( self.layerList[layer].output_state() )
+            return [self.ID, len(self.layerList), state]
+        except Exception as e:
+            loging.debug([traceback,print_stack, e])
     def destroy_self(self):
         #function to destroy self in event this is an empty network
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
