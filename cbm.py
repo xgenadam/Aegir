@@ -37,6 +37,7 @@ logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 #
 #   MASTER TODO list:
 #       more readable function to create connections manually
+#       implement json output
 
 class node(object):
     #    node object for neural network
@@ -72,8 +73,8 @@ class node(object):
        #first call incoming connection internal update function
        #then test to see whether node should propagate or not
         try:
-            for cntn in xrange(len(self.recvFromList)):
-                self.recvFromList[cntn].update_iteration()
+            for i, cntn in enumerate(self.recvFromList):
+                cntn.update_iteration()
 
         except Exception as e:
         #this works for now
@@ -105,8 +106,8 @@ class node(object):
     def remove_recvFrom(self, connectionID):
         #remove connection with connectionID from recvFromList
         try:
-            for cntn in xrange(len(self.recvFromList)):
-                if self.recvFromList[cntn].ID == connectionID:
+            for i, cntn in enumerate(self.recvFromList):
+                if cntn.ID == connectionID:
                     del self.recvFromList[cntn]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -114,7 +115,7 @@ class node(object):
     def remove_sendNode(self,connectionID):
         #remove connection with connectionID from sendToList
         try:
-            for cntn in xrange(len(sendToList)):
+            for cntn, obj in enumerate(sendToList):
                 if sendToList[cntn].ID == connectionID:
                     del self.sendToList[cntc]
         except Exception as e:
@@ -127,8 +128,8 @@ class node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             self.propSendCount += 1 #update counter
-            for connection in xrange(len(self.sendToList)):
-                self.sendToList[connection].initiate_propagation(self.propagationWeight)
+            for i, cntn in enumerate(self.sendToList):
+                cntn.initiate_propagation(self.propagationWeight)
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -168,14 +169,14 @@ class node(object):
                  self.propSendCount, self.propRecvCount ]
             outList = ['output list']
             inList = ['input list']
-            for cntn in xrange(len(self.sendToList)):
-                outList.append(self.sendToList[cntn].output_state())
+            for i, cntn in enumerate(self.sendToList):
+                outList.append(cntn.output_state())
 
             state.append(outList)
             del outList
 
-            for cntn in xrange(len(self.recvFromList)):
-                inList.append(self.recvFromList[cntn].output_state())
+            for i, cntn in enumerate(self.recvFromList):
+                inList.append(cntn.output_state())
 
             state.append(inList)
             del inList
@@ -286,11 +287,11 @@ class connection(object):
         #returns none
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            for stackItem in xrange(len(self.propagationStack)):
-                self.propagationStack[stackItem][0] -= 1
-                if self.propagationStack[stackItem][0] <= 0:
-                    self.propagate(self.propagationStack[stackItem][1])
-                    self.propagationStack.pop(stackItem)
+            for i, stackItem in enumerate(self.propagationStack):
+                stackItem[0] -= 1
+                if stackItem[0] <= 0:
+                    self.propagate(stackItem[1])
+                    del stackItem
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -402,8 +403,8 @@ class layer(object):
 
         #first update all internal nodes
         try:
-            for node in xrange(len(self.nodeList)):
-                self.nodeList[node].update_iteration()
+            for i, node in enumerate(self.nodeList):
+                node.update_iteration()
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -420,9 +421,9 @@ class layer(object):
     def delete_node(self, nodeID):
         #remove reference to node here
         try:
-            for node in xrange(len(self.nodeList)):
-                if self.nodeList[node].ID == nodeID:
-                    del self.nodeList[node]
+            for i, node in enumerate(self.nodeList):
+                if node.ID == nodeID:
+                    del node
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -430,9 +431,9 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #call all sub nodes to destroy self then call parent network to remove this layer
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        for nodes in xrange(len(self.nodeList)):
+        for nodes in enumerate(self.nodeList):
             try:
-                self.nodeList[node].destroy_self()
+                node.destroy_self()
             except Exception as e:
                 logging.debug([traceback.print_stack,e])
 
@@ -454,8 +455,8 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             state = []
-            for node in xrange(len(self.nodeList)):
-                state.append(self.nodeList[node].output_state())
+            for node in enumerate(self.nodeList):
+                state.append(node.output_state())
 
             return [self.ID, len(self.nodeList), state]
         except Exception as e:
@@ -532,8 +533,8 @@ class Network(object):
     def update_iteration(self):
         #call update functions in all layers
         try:
-            for layer in xrange(len(self.layerList)):
-                self.layerList[layer].update_iteration()
+            for i, layer in enumerate(self.layerList):
+                layer.update_iteration()
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -541,8 +542,8 @@ class Network(object):
     def retina(self, *args, **kwargs):
         #easier way to pass information to the input layer
         try:
-            for arg in xrange(len(args)):
-                self.input.nodeList[arg].receive_propagation(args[arg])
+            for i, arg in enumerate(args):
+                self.input.nodeList[i].receive_propagation(arg)
                 # logging.info(str(arg), str(args[arg]))
         except Exception as e:
             logging.debug([traceback.print_stack,e])

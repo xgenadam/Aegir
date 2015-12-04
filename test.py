@@ -2,7 +2,7 @@
 import unittest
 import cbm
 import copy
-
+import json
 
 
 class test_basic_logic_gates(unittest.TestCase):
@@ -46,6 +46,7 @@ class test_basic_logic_gates(unittest.TestCase):
         XorHiddenLayer[2].create_connection(XorOutputLayer[0], 1.0)
 
         f = open("xor_network", "w")
+        print >> f, json.dumps(self.xor_gate.output_state())
 
     #first test if and gate works
     def test_and(self):
