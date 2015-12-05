@@ -5,8 +5,9 @@ import copy
 import json
 
 
+
 class test_basic_logic_gates(unittest.TestCase):
-    #generate basic logic gates and test reason for this is
+    #generate basic logic gates to test core functionality and robustness of network
     def setUp(self):
         #logic gates
 
@@ -122,9 +123,21 @@ class test_basic_logic_gates(unittest.TestCase):
 
 
     #test all IDs are correct
-
+    def test_ID(self):
+        pass
 
     #test output state functios
+    def test_output(self):
+        pass
+
+    def test_network_input(self):
+        pass
+
+    def test_creation(self):
+        pass
+
+    def test_destruction(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main(exit=False)

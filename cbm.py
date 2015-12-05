@@ -73,8 +73,8 @@ class node(object):
        #first call incoming connection internal update function
        #then test to see whether node should propagate or not
         try:
-            for i, cntn in enumerate(self.recvFromList):
-                cntn.update_iteration()
+
+            map((lambda cntn: getattr(cntn, 'update_iteration')()), self.recvFromList)
 
         except Exception as e:
         #this works for now
@@ -403,8 +403,8 @@ class layer(object):
 
         #first update all internal nodes
         try:
-            for i, node in enumerate(self.nodeList):
-                node.update_iteration()
+            map((lambda nd : getattr(nd, 'update_iteration')()), self.nodeList)
+
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -527,14 +527,15 @@ class Network(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             self.layerList.insert(layerLocation, layer(numNodes, self, self.generate_layer_ID()) )
+
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
     def update_iteration(self):
         #call update functions in all layers
         try:
-            for i, layer in enumerate(self.layerList):
-                layer.update_iteration()
+            map(lambda lyr : getattr(lyr, 'update_iteration')(), self.layerList)
+
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -544,7 +545,7 @@ class Network(object):
         try:
             for i, arg in enumerate(args):
                 self.input.nodeList[i].receive_propagation(arg)
-                # logging.info(str(arg), str(args[arg]))
+                
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
