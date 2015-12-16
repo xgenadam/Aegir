@@ -4,7 +4,7 @@ import random
 import logging
 import traceback
 import json
-
+import weakref
 
 logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 
@@ -37,7 +37,8 @@ logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 #       barebones of node and connection classes (they can function)
 #
 #   MASTER TODO list:
-#       implement json output
+#           propper object disposal
+#
 
 class Node(object):
     #    node object for neural network
@@ -60,6 +61,8 @@ class Node(object):
         self.parentLayer = parentLayer
         self.sendToList = []
         self.recvFromList = []
+        self.sendToDict = {}
+        self.recvFromDict = {}
         self.activationPotential = 0.0 #this is the value that gets increased when this node is propagated to
         self.activationThreshold = 1.0 #this is the threshold for the node to propagate
         self.propagationWeight = 1.0 #scale the propagation of outgoing connections
@@ -106,24 +109,28 @@ class Node(object):
                                     self,
                                     self.generate_Connection_ID(),
                                     connectionWeight) )
+            self.sendToDict[sendToList[-1].ID] = sendToList[-1]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
     def remove_recvFrom(self, connectionID):
         #remove connection with connectionID from recvFromList
         try:
+            del self.recvFromDict[connectionID]
             for i, cntn in enumerate(self.recvFromList):
                 if cntn.ID == connectionID:
-                    del self.recvFromList[cntn]
+                    del self.recvFromList[i]
+                    break
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
     def remove_sendNode(self,connectionID):
         #remove connection with connectionID from sendToList
         try:
-            for cntn, obj in enumerate(sendToList):
-                if sendToList[cntn].ID == connectionID:
-                    del self.sendToList[cntc]
+            del self.sendToDict[connectionID]
+            for i, cntn in enumerate(sendToList):
+                if self.sendToList[i].ID == connectionID:
+                    del self.sendToList[i]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -134,7 +141,7 @@ class Node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             self.propSendCount += 1 #update counter
-            for i, cntn in enumerate(self.sendToList):
+            for cntn in self.sendToList:
                 cntn.initiate_propagation(self.propagationWeight)
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -190,16 +197,13 @@ class Node(object):
             state['Incoming Connections'] = inList
 
             return state
+
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
     def generate_Connection_ID(self):
         #give a connection a unique id in string format net$lyr$nd$cntn$
         try:
-            # n=0
-            # while True:
-            #     yield str(self.ID) + '--cntn->' + str(n)
-            #     n += 1
             return str(self.ID) + '->cntn-' + str(len(self.sendToList))
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -212,14 +216,15 @@ class Node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #first delete incoming and outgoing nodes
         #for connection in self.sendToList:
-        try:
-            connection.destroy_self()
-        except Exception as e:
-            logging.debug([traceback.print_stack,e])
+        for connection in self.sendToList:
+            try:
+                self.remove_sendNode(connection.ID)
+            except Exception as e:
+                logging.debug([traceback.print_stack,e])
 
         for connection in self.recvFromList:
             try:
-                connection.destroy_self()
+                self.remove_recvFrom(connection.ID)
             except Exception as e:
                 logging.debug([traceback.print_stack,e])
 
@@ -557,7 +562,8 @@ class Network(object):
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.layerList.insert(layerLocation, Layer(numNodes, self, self.generate_layer_ID()) )
+            self.layerList.insert(layerLocation,
+                    Layer(numNodes, self, self.generate_layer_ID()) )
 
         except Exception as e:
             logging.debug([traceback.print_stack,e])
