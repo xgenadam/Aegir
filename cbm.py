@@ -172,13 +172,13 @@ class Node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             state = {'ID' : self.ID,
-                    'Layer ID' : self.Layer.ID,
+                    'Layer ID' : self.parentLayer.ID,
                     'Activation Threshold' :  self.activationThreshold,
                     'Propagation Weight' : self.propagationWeight,
                     'Send Count' : self.propSendCount,
                     'Receive Count' : self.propRecvCount }
-            outList = ['output list']
-            inList = ['input list']
+            outList = []
+            inList = []
 
             for cntn in self.sendToList:
                 outList.append(cntn.output_state())
@@ -200,7 +200,7 @@ class Node(object):
             # while True:
             #     yield str(self.ID) + '--cntn->' + str(n)
             #     n += 1
-            return str(self.ID) + '--cntn->' + str(len(self.sendToList))
+            return str(self.ID) + '->cntn-' + str(len(self.sendToList))
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -357,10 +357,10 @@ class Connection(object):
             return {'ID': self.ID,
                     'From': self.sendNode.ID,
                     'To' : self.recvNode.ID,
-                    'Weight' : self.Weight,
+                    'Weight' : self.weight,
                     'Count' : self.propCount }
 
-        except exception as e:
+        except Exception as e:
             logging.debug([traceback.print_stack,e])
 
     def _maintainance(self, *errors):
@@ -467,7 +467,7 @@ class Layer(object):
     def generate_Node_ID(self):
        #generate ID for sub nodes, net$lyr$nd$cntn$
         #TODO: change this as can result in  name clashes
-        return self.ID + 'nd' + str(len(self.nodeList))
+        return self.ID + '->nd-' + str(len(self.nodeList))
 
 
     def output_state(self):
@@ -475,11 +475,21 @@ class Layer(object):
         #output state function
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            state = []
-            for node in enumerate(self.nodeList):
-                state.append(node.output_state())
+            # state = []
+            # for node in enumerate(self.nodeList):
+            #     state.append(node.output_state())
 
-            return [self.ID, len(self.nodeList), state]
+            state = {
+                    'ID' : self.ID,
+                    'Parent ID' : self.parentNetwork.ID
+                    }
+            nodes = []
+            for i, node in enumerate(self.nodeList):
+                nodes.append(self.nodeList[i].output_state())
+            state['Nodes'] = nodes
+
+            return state
+
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -503,7 +513,7 @@ class Network(object):
 
         self.ID = ID
         self.layerList = [None,None]
-        self.parent = parent
+        self.parent = parent # if is subnetwork
         self.create_input_layer(numInputNodes) #number of desired nodes for input layer
         self.create_output_layer(numOutputNodes) #number of desired nodes for output layer
 
@@ -515,7 +525,7 @@ class Network(object):
         #output: layer object consisting of number of nodes equal to numNodes
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.layerList[0] = Layer(numNodes, self, self.ID + 'lyrI')
+            self.layerList[0] = Layer(numNodes, self, self.ID + '->lyr-I')
             self.input = self.layerList[0]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -527,7 +537,7 @@ class Network(object):
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.layerList[-1] = Layer(numNodes, self, self.ID + 'lyrO')
+            self.layerList[-1] = Layer(numNodes, self, self.ID + '->lyr-O')
             self.output = self.layerList[-1]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -536,7 +546,7 @@ class Network(object):
        #generate ID for sub nodes, net$lyr$nd$cntn$
         #TODO: change this as can result in  name clashes
         try:
-            return self.ID + 'lyr' + str(len(self.layerList) -1)
+            return self.ID + '->lyr-' + str(len(self.layerList) -1)
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -597,10 +607,16 @@ class Network(object):
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            state = []
-            for layer in xrange(len(self.layerList)):
-                state.append( self.layerList[layer].output_state() )
-            return [self.ID, len(self.layerList), state]
+            state = {
+                    'ID' : self.ID,
+                    }
+            layers =[]
+            for i, layer in enumerate(self.layerList):
+                layers.append( self.layerList[i].output_state() )
+
+            state['Layers'] = layers
+
+            return state
         except Exception as e:
             loging.debug([traceback,print_stack, e])
     def destroy_self(self):
