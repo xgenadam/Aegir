@@ -2,9 +2,6 @@
 import unittest
 import cbm
 import copy
-import json
-
-
 
 class test_basic_logic_gates(unittest.TestCase):
     #generate basic logic gates to test core functionality and robustness of network
@@ -13,7 +10,9 @@ class test_basic_logic_gates(unittest.TestCase):
 
         #and gate:
         #first setup network with 2 input nodes and 1 output node
+        # import pdb; pdb.set_trace()
         self.and_gate = cbm.Network(2,1)
+
         #connect the input layer to the output layer with wieghting 1/2
         self.and_gate.input.nodeList[0].create_connection(
                 self.and_gate.output.nodeList[0], 0.5)
@@ -46,8 +45,8 @@ class test_basic_logic_gates(unittest.TestCase):
         XorHiddenLayer[1].create_connection(XorOutputLayer[0], -2)
         XorHiddenLayer[2].create_connection(XorOutputLayer[0], 1.0)
 
-        f = open("xor_network", "w")
-        print >> f, json.dumps(self.xor_gate.output_state())
+        # f = open("xor_network", "w")
+        # print >> f, json.dumps(self.xor_gate.output_state())
 
     #first test if and gate works
     def test_and(self):
@@ -74,8 +73,6 @@ class test_basic_logic_gates(unittest.TestCase):
 
         #assert correct output
         self.assertSequenceEqual(truthTable, [1,0,0,0])
-
-
 
     #then test or gate
     def test_or(self):
@@ -121,13 +118,11 @@ class test_basic_logic_gates(unittest.TestCase):
 
         self.assertSequenceEqual(truthTable, [0,1,1,0])
 
-
-    #test all IDs are correct
-    def test_ID(self):
-        pass
-
     #test output state functios
     def test_output(self):
+    #import pickled network, and its known associated json.
+    #call the output self function of the network and then assertequal
+    #with the known json
         pass
 
     def test_network_input(self):
@@ -137,6 +132,13 @@ class test_basic_logic_gates(unittest.TestCase):
         pass
 
     def test_destruction(self):
+        pass
+
+    def perceptron(self):
+        pass
+
+    def test_mnisk(self):
+        #read in pretrained network and test letter recognition
         pass
 
 if __name__ == '__main__':

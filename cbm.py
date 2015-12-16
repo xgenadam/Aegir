@@ -3,6 +3,7 @@ import math
 import random
 import logging
 import traceback
+import json
 
 
 logging.basicConfig(filename='debug.log',level=logging.DEBUG)
@@ -36,10 +37,9 @@ logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 #       barebones of node and connection classes (they can function)
 #
 #   MASTER TODO list:
-#       more readable function to create connections manually
 #       implement json output
 
-class node(object):
+class Node(object):
     #    node object for neural network
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     #    internal variables:____________________________________________________
@@ -51,8 +51,6 @@ class node(object):
     #       backwards/forwardsPropagationWeight: value this node propagates by
     #       propagationBackwards/ForwardsNormal: total values of forwards/backwards
     #          node activation weights, deciding which nodes to fire based on RNG
-    #       TODO: implement iteration stuff -- done some, want to double check, think
-    #               this can be done better.
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     #    structure:
     #
@@ -67,6 +65,7 @@ class node(object):
         self.propagationWeight = 1.0 #scale the propagation of outgoing connections
         self.propSendCount = 0 # counter
         self.propRecvCount = 0 # counter
+        # self.identGen = self.generate_Connection_ID()
 
     def update_iteration(self):
        #Function to handle iteration update procedure
@@ -74,7 +73,14 @@ class node(object):
        #then test to see whether node should propagate or not
         try:
 
-            map((lambda cntn: getattr(cntn, 'update_iteration')()), self.recvFromList)
+            map(
+                lambda cntn: cntn.update_iteration(),
+                filter(
+                    lambda cntn: hasattr(cntn, 'update_iteration'), self.recvFromList
+                    )
+                )
+
+            # map(lambda)
 
         except Exception as e:
         #this works for now
@@ -96,7 +102,7 @@ class node(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
             self.sendToList.append(
-                        connection(recvNode,
+                        Connection(recvNode,
                                     self,
                                     self.generate_Connection_ID(),
                                     connectionWeight) )
@@ -165,21 +171,23 @@ class node(object):
         #   list object that contains the above information
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            state = [self.ID, self.activationThreshold, self.propagationWeight,
-                 self.propSendCount, self.propRecvCount ]
+            state = {'ID' : self.ID,
+                    'Layer ID' : self.Layer.ID,
+                    'Activation Threshold' :  self.activationThreshold,
+                    'Propagation Weight' : self.propagationWeight,
+                    'Send Count' : self.propSendCount,
+                    'Receive Count' : self.propRecvCount }
             outList = ['output list']
             inList = ['input list']
-            for i, cntn in enumerate(self.sendToList):
+
+            for cntn in self.sendToList:
                 outList.append(cntn.output_state())
 
-            state.append(outList)
-            del outList
-
-            for i, cntn in enumerate(self.recvFromList):
+            for cntn in self.recvFromList:
                 inList.append(cntn.output_state())
 
-            state.append(inList)
-            del inList
+            state['Outgoing Connections'] = outList
+            state['Incoming Connections'] = inList
 
             return state
         except Exception as e:
@@ -187,9 +195,12 @@ class node(object):
 
     def generate_Connection_ID(self):
         #give a connection a unique id in string format net$lyr$nd$cntn$
-        #TODO: change this as can result in  name clashes
         try:
-            return str(self.ID) + 'cntn' + str(len(self.sendToList))
+            # n=0
+            # while True:
+            #     yield str(self.ID) + '--cntn->' + str(n)
+            #     n += 1
+            return str(self.ID) + '--cntn->' + str(len(self.sendToList))
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -218,7 +229,7 @@ class node(object):
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
-class connection(object):
+class Connection(object):
     #   conection object, used to connect nodes
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     #    internal variables:________________________________________________________
@@ -242,7 +253,8 @@ class connection(object):
     #    again.
     #   TODO: error handling and logging
     #    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    def __init__(self, recvNode, sendNode=None, ID="cntn00",  connectionWeight=1.0, *args, **kwargs):
+    def __init__(self, recvNode, sendNode=None, ID="cntn-00",
+                    connectionWeight=1.0, *args, **kwargs):
     #        :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     #        input:
     #        sendNode -- sender node, is type node object
@@ -339,13 +351,19 @@ class connection(object):
         #self.propagationTime, self.propCount and  any possible errorsnodes are
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            state  = [self.ID, self.sendNode.ID, self.recvNode.ID, self.weight,
-                    self.propagationTime, self.propCount]
-            return state
+            # state  = [self.ID, self.sendNode.ID, self.recvNode.ID, self.weight,
+            #         self.propagationTime, self.propCount]
+            # return state
+            return {'ID': self.ID,
+                    'From': self.sendNode.ID,
+                    'To' : self.recvNode.ID,
+                    'Weight' : self.Weight,
+                    'Count' : self.propCount }
+
         except exception as e:
             logging.debug([traceback.print_stack,e])
 
-    def _connection_maintainance(self, *errors):
+    def _maintainance(self, *errors):
         #this function handles maintainance in the case that any other function
         #throws an exception. typically this means logging error details, raising
         #the error if critical and then destroying the connection by removing all references
@@ -374,13 +392,11 @@ class connection(object):
         try:
             self.recvNode.remove_connection(self.ID)
             self.sendNode.remove_connection(self.ID)
-            del self.recvNode
-            del self.sendNode
         except Exception as fatal:
             pass
             #bad stuff has happened terminate the program
 
-class layer(object):
+class Layer(object):
     #    object describing layer of nodes. just as nodes contain connections, layers
     #    contain nodes
     #    should contain layer metadata and series of nodes
@@ -403,7 +419,12 @@ class layer(object):
 
         #first update all internal nodes
         try:
-            map((lambda nd : getattr(nd, 'update_iteration')()), self.nodeList)
+            map(
+                lambda nd: nd.update_iteration(),
+                filter(
+                    lambda nd: hasattr(nd, 'update_iteration'), self.nodeList
+                    )
+                )
 
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -414,7 +435,7 @@ class layer(object):
         #create node in layer here
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.nodeList.append(node(self.generate_Node_ID(), self))
+            self.nodeList.append(Node(self.generate_Node_ID(), self))
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
@@ -431,7 +452,7 @@ class layer(object):
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         #call all sub nodes to destroy self then call parent network to remove this layer
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        for nodes in enumerate(self.nodeList):
+        for nodes in self.nodeList:
             try:
                 node.destroy_self()
             except Exception as e:
@@ -494,7 +515,7 @@ class Network(object):
         #output: layer object consisting of number of nodes equal to numNodes
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.layerList[0] = layer(numNodes, self, self.ID + 'lyrI')
+            self.layerList[0] = Layer(numNodes, self, self.ID + 'lyrI')
             self.input = self.layerList[0]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -506,7 +527,7 @@ class Network(object):
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.layerList[-1] = layer(numNodes, self, self.ID + 'lyrO')
+            self.layerList[-1] = Layer(numNodes, self, self.ID + 'lyrO')
             self.output = self.layerList[-1]
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -526,7 +547,7 @@ class Network(object):
         #output:
         #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         try:
-            self.layerList.insert(layerLocation, layer(numNodes, self, self.generate_layer_ID()) )
+            self.layerList.insert(layerLocation, Layer(numNodes, self, self.generate_layer_ID()) )
 
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -534,7 +555,15 @@ class Network(object):
     def update_iteration(self):
         #call update functions in all layers
         try:
-            map(lambda lyr : getattr(lyr, 'update_iteration')(), self.layerList)
+            # map(lambda lyr : getattr(lyr, 'update_iteration')(), self.layerList)
+
+            map(
+                lambda lyr: lyr.update_iteration(),
+                filter(
+                        lambda lyr: hasattr(lyr, 'update_iteration'),
+                        self.layerList
+                )
+            )
 
         except Exception as e:
             logging.debug([traceback.print_stack,e])
@@ -545,7 +574,7 @@ class Network(object):
         try:
             for i, arg in enumerate(args):
                 self.input.nodeList[i].receive_propagation(arg)
-                
+            #map(lambda nd : getattr(nd, 'recieve_propagation')(args[self.input.nodeList.index(nd)]) , self.input.nodeList)
         except Exception as e:
             logging.debug([traceback.print_stack,e])
 
